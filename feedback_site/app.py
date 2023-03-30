@@ -5,6 +5,8 @@ app = Flask(__name__)
 
 def get_db_connection() -> psycopg2.extensions.connection:
     """establishing connection with database"""
+
+   
     conn = psycopg2.connect(
         database="test_database",
         user="test_user",
@@ -12,15 +14,17 @@ def get_db_connection() -> psycopg2.extensions.connection:
         host="127.0.0.1",
         port="5432",
     )
+    app.logger.info('%s logged in successfully', conn)
+  
     return conn
 
 
 SQL1 ="""
 PREPARE SQL (text) AS
-SELECT * FROM netbsd.feedbacks f WHERE f.confirmation_no=$1;
-EXECUTE SQL(%s);
+SELECT * FROM netbsd.feedbacks f WHERE f.confirmation_no=$1; 
+EXECUTE SQL({0});
 """
-
+# AND f.email=$2
 
 SQL2 = """
 PREPARE SQL (text, bool, text, bool, text, bool, text) AS
@@ -37,16 +41,19 @@ def index() -> str:
 @app.route('/validate', methods=['POST'])
 def validate() -> str:
     fid=request.form['feed']
+
     conn = get_db_connection()
+    
     cur = conn.cursor()
-    cur.execute(SQL1,fid)       ### type error
+    cur.execute(SQL1.format(fid))       ### type error
     identifier = cur.fetchall()
     cur.close()
     conn.close()
     if not identifier:
         return render_template('valid.html',fid=fid)
     return render_template('invalid.html',identifier=identifier)
-
+  
+      
 
 @app.route('/store/<string:fid>', methods=['POST'])
 def store(fid: str) -> str:
